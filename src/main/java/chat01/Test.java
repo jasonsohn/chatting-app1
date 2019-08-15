@@ -1,8 +1,9 @@
+package chat01;
+
 import java.io.UnsupportedEncodingException;
 import java.util.*;
 
 public class Test {
-
     static int[][] loginLogoutLog;
     static int[][] loginLogoutLogBigger;
     static Map<String, Object> userInfo = new HashMap<>();
