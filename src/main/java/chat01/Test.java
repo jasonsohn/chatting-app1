@@ -11,7 +11,7 @@ public class Test {
 
     public static void main(String[] args) {
 //        tlvMessage("MSSG", "가가가");
-        tlvMessage("MSSG", "가가가가가가가가가가");
+        tlvMessage("MSSG", "가가가가가가가가가가가");
         Scanner scanner = new Scanner(System.in);
         String str = scanner.nextLine();
         System.out.println(str.length());
@@ -20,13 +20,17 @@ public class Test {
 
     private static byte[] tlvMessage(String msgType, String reqMsg) {
         try {
+            System.out.println("String 길이 : " + reqMsg.length());
             byte[] reqValue = reqMsg.getBytes("UTF-8"); // Msg 문자열을 바이트배열로 변환
+            System.out.println("byte[] 길이 : " + reqValue.length);
 
             byte[] reqType = msgType.getBytes(); // type 문자열을 바이트배열로 변환
 
             byte[] reqLength = toBytes(reqValue.length); //
 
-            byte[] reqCount = toBytes((reqValue.length / 10) + 1);
+            int count = (int) Math.ceil((double)reqValue.length / 10);
+            System.out.println("count 수 : " + count);
+            byte[] reqCount = toBytes(count);
 
             byte[] req = new byte[reqValue.length + 8];
             //byte[] req = new byte[1024];

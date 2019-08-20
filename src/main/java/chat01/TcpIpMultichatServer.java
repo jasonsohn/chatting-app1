@@ -8,7 +8,7 @@ import java.util.HashMap;
 public class TcpIpMultichatServer {
 
     HashMap clients;
-    static final String BRACKET_START = "[11시스템]: [";
+    static final String BRACKET_START = "[시스템]: [";
     static final String BRACKET_END = "]";
     static final String COLON = ":";
     static final String PRINT_MSG_INIT = "[시스템]: 서버가 시작되었습니다.";

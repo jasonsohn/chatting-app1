@@ -1,14 +1,13 @@
 package chat01;
 
+import org.omg.PortableInterceptor.INACTIVE;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 
 public class ServerReceiver extends Thread {
 
@@ -36,6 +35,7 @@ public class ServerReceiver extends Thread {
     static final String SYSTEM_CODE1 = "SYSL";
     static final String EMOJI_CODE = "EMOJ";
     static final String LOGOUT_CODE = "LOUT";
+    static final int PACKET_SIZE = 10;
     static Integer conversationIndex = 0;
     boolean isNextstep = false;
     int loginLogSize = 5;
@@ -70,9 +70,9 @@ public class ServerReceiver extends Thread {
 
             // 현재 로그인유저 체크
             while (!loginAccess) {
-
-//                buffer = receiveStreamDataToArray();
-                buffer = receiveStreamDataToArrayWithSize();
+                System.out.println("로그인 유저 체크");
+//                buffer = receiveStreamDataToArrayWithSize();
+                buffer = receiveStreamDataToArrayWithSize1();
                 tlvList = splitTypeLengthValue(buffer);
 
                 // 1. 접속 중인지 확인, 접속 없으면 loginAcess true
@@ -117,7 +117,8 @@ public class ServerReceiver extends Thread {
 //            System.out.println("loginUserNow출력:" + loginUserNow.toString());
             while (isFinished != true) {
 //                buffer = receiveStreamDataToArray();
-                buffer = receiveStreamDataToArrayWithSize();
+//                buffer = receiveStreamDataToArrayWithSize();
+                buffer = receiveStreamDataToArrayWithSize1();
                 tlvList = splitTypeLengthValue(buffer);
                 type = new String(tlvList.get(0), 0, tlvList.get(0).length, "UTF-8");
                 value = new String(tlvList.get(2), 0, tlvList.get(2).length, "UTF-8"); // txt/id
@@ -153,9 +154,9 @@ public class ServerReceiver extends Thread {
                     String keyword3 = value.substring(valueIndex - 2, valueIndex - 1);
                     String keyword1 = value.substring(7, valueIndex);
                     String keyword = value.substring(7, 8);
-                    System.out.println("keyword출력:"+keyword);
-                    System.out.println("keyword1출력:"+keyword1);
-                    System.out.println("keyword2출력:"+keyword2);
+                    System.out.println("keyword출력:" + keyword);
+                    System.out.println("keyword1출력:" + keyword1);
+                    System.out.println("keyword2출력:" + keyword2);
 
                     for (int i = 1; i < 10; i++) {
                         if (keyword.equals(String.valueOf(i))) {
@@ -347,27 +348,49 @@ public class ServerReceiver extends Thread {
         sendToAll(SYSTEM_CODE1, oldName + "님이 " + newName + "으로 유저명을 변경하였습니다." + "/" + newName);
     }
 
-
-    private byte[] receiveStreamDataToArray() {
-        byte[] buffer = new byte[1096]; // 책갈피
+    private byte[] receiveStreamDataToArrayWithSize1() {
+        byte[] bufferSize = new byte[16 + PACKET_SIZE]; // 책갈피
         try {
-            bufferedInputStream.read(buffer);
+            bufferedInputStream.read(bufferSize);
+            byte[] reqCount = new byte[4];
+            System.arraycopy(bufferSize, 12, reqCount, 0, 4);
+            int arrayCount = byteArrayToInt(reqCount);
+            System.out.println("서버쪽 메세지 패킷 totalCount : " + arrayCount);
+            byte[] buffer = new byte[16 + arrayCount * PACKET_SIZE];
+            System.arraycopy(bufferSize, 0, buffer, 0, 16);
+            System.arraycopy(bufferSize, 8, reqCount, 0, 4);
+            int currentCount = byteArrayToInt(reqCount);
+            System.out.println("서버쪽 메세지 현재 카운트 : " + currentCount + " / " + arrayCount);
+            System.arraycopy(bufferSize, 16, buffer, 16, PACKET_SIZE);
+            if (arrayCount > 1) {
+                // currentCount와 메세지만 변경
+                for (int i = 0; i < arrayCount; i++) {
+                    byte[] bufferSize_tail = new byte[16 + PACKET_SIZE]; //
+                    bufferedInputStream.read(bufferSize_tail);
+                    System.arraycopy(bufferSize_tail, 8, reqCount, 0, 4);
+                    currentCount = byteArrayToInt(reqCount);
+                    System.out.println("서버쪽 메세지 현재 카운트 : " + currentCount + " / " + arrayCount);
+                    System.out.println("서버쪽 반복문 현재 카운트 : " + (i + 1) + " / " + arrayCount);
+                }
+            }
 
+            return buffer;
         } catch (IOException e) {
-
+            return null;
         }
 
-        return buffer;
     }
 
     private byte[] receiveStreamDataToArrayWithSize() {
-        byte[] bufferSize = new byte[8]; // 책갈피
+//        byte[] bufferSize = new byte[8]; // 책갈피
+        byte[] bufferSize = new byte[4]; // 책갈피
         try {
             bufferedInputStream.read(bufferSize);
             byte[] reqCount = new byte[4];
             System.arraycopy(bufferSize, 0, reqCount, 0, 4);
             int arrayCount = byteArrayToInt(reqCount);
-            byte[] buffer = new byte[arrayCount * 1024];
+            System.out.println("Serverside Message Count:" + arrayCount);
+            byte[] buffer = new byte[arrayCount * PACKET_SIZE];
             bufferedInputStream.read(buffer);
             return buffer;
         } catch (IOException e) {
@@ -383,11 +406,16 @@ public class ServerReceiver extends Thread {
         byte[] length = new byte[4];
         System.arraycopy(resArray, 4, length, 0, 4);
         int arraySize = byteArrayToInt(length);
+//        System.out.println("Serverside arraySize : " + arraySize);
+
         byte[] value = new byte[arraySize];
+//        System.out.println("Serverside value.length : " + value.length);
+//        System.out.println("Serverside (resArray.length - 8) : " + (resArray.length - 8));
 
         System.arraycopy(resArray, 0, type, 0, 4);
         System.arraycopy(resArray, 4, length, 0, 4);
-        System.arraycopy(resArray, 8, value, 0, value.length);
+//        System.arraycopy(resArray, 8, value, 0, value.length);
+        System.arraycopy(resArray, 16, value, 0, value.length);
         tlvList.add(type);
         tlvList.add(length);
         tlvList.add(value);
@@ -438,7 +466,7 @@ public class ServerReceiver extends Thread {
 
 
         totalMsg = txtMsg + "/" + id;
-        System.out.println("conversationIndex:" + conversationIndex + ":msg:" + msg);
+//        System.out.println("conversationIndex:" + conversationIndex + ":msg:" + msg);
         conversationIndex += 1;
         //System.out.println("Storage 출력:" + conversationStorage.toString().replace(", ", ""));
         while (it.hasNext()) {
@@ -446,13 +474,65 @@ public class ServerReceiver extends Thread {
                 String element = (String) it.next();
                 BufferedOutputStream bufferedOutputStream = (BufferedOutputStream) clients.get(element);
 //                System.out.println("element:" + element);
-                bufferedOutputStream.write(messageSize(totalMsg));
-                bufferedOutputStream.write(tlvMessage(type, totalMsg));
-                bufferedOutputStream.flush();
+//                bufferedOutputStream.write(messageSize(totalMsg));
+//                bufferedOutputStream.write(tlvMessage(type, totalMsg));
+//                bufferedOutputStream.flush();
+
+                byte[] req = tlvMessageWithSize(type, totalMsg);
+                byte[] countMsg = new byte[4];
+                System.arraycopy(req, 8, countMsg, 0, 4);
+                int arrayCount = byteArrayToInt(countMsg);
+                int restSize = (req.length - 12) % PACKET_SIZE;
+                System.out.println("sendToAll 메세지 패킷 totalCount : " + arrayCount);
+                for (int i = 0; i < arrayCount; i++) {
+                    byte[] resultReq = new byte[16 + PACKET_SIZE]; // type, length, currentCount, totalCount, Msg(PACKET_SIZE)
+                    byte[] currentCount = toBytes(i + 1);
+                    System.arraycopy(req, 0, resultReq, 0, 8);          // type, length
+                    System.arraycopy(currentCount, 0, resultReq, 8, 4); // 현재 메세지
+                    System.arraycopy(countMsg, 0, resultReq, 12, 4); // 현재 메세지
+                    int position = 12 + i * PACKET_SIZE;
+
+//                    System.arraycopy(req, position, resultReq, 16, req.length - (position)); // 메세지
+                    if (i == arrayCount - 1) {
+                        System.arraycopy(req, position, resultReq, 16, restSize); // 메세지
+                    } else {
+                        System.arraycopy(req, position, resultReq, 16, PACKET_SIZE); // 메세지
+                    }
+                    System.out.println("sendToAll 메세지 패킷 currentCount : " + (i + 1) + " / " + arrayCount);
+                    bufferedOutputStream.write(resultReq);
+                    bufferedOutputStream.flush();
+                }
 
             } catch (IOException e) {
 
             }
+        }
+    }
+
+    private byte[] tlvMessageWithSize(String msgType, String reqMsg) {
+        try {
+            System.out.println("메세지의 String 길이 : " + reqMsg.length());
+            byte[] reqValue = reqMsg.getBytes("UTF-8"); // Msg 문자열을 바이트배열로 변환
+            System.out.println("메세지의 byte[] 길이 : " + reqValue.length);
+
+            byte[] reqType = msgType.getBytes(); // type 문자열을 바이트배열로 변환
+
+            byte[] reqLength = toBytes(reqValue.length);
+
+            int messageCount = (int) Math.ceil((double) reqValue.length / PACKET_SIZE); // 패킷 수
+            byte[] totalCount = toBytes(messageCount);
+
+            byte[] req = new byte[reqValue.length + 12];
+
+            System.arraycopy(reqType, 0, req, 0, 4);
+            System.arraycopy(reqLength, 0, req, 4, 4);
+            System.arraycopy(totalCount, 0, req, 8, 4);
+            System.arraycopy(reqValue, 0, req, 12, reqValue.length);
+            return req;
+
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+            return null;
         }
     }
 
@@ -461,9 +541,10 @@ public class ServerReceiver extends Thread {
 
             byte[] reqValue = reqMsg.getBytes("UTF-8");
 
-            byte[] reqLength =toBytes(reqValue.length);
+            byte[] reqLength = toBytes(reqValue.length);
 
-            byte[] reqCount = toBytes((reqValue.length / 10) + 1);
+//            byte[] reqCount = toBytes((reqValue.length / 10) + 1);
+            byte[] reqCount = toBytes(((8 + reqValue.length) / 10) + 1); // TYPE, LENGTH 길이 포함
 
             byte[] req = new byte[8];
             System.arraycopy(reqCount, 0, req, 0, 4);
