@@ -19,12 +19,7 @@ public class ServerReceiver extends Thread {
 
     static Map<String, Integer> loginLog = new HashMap<>();
     static Map<String, Integer> logoutLog = new HashMap<>();
-    //    static ArrayList<String> loginUserNow = new ArrayList<>(); // 현재 접속자 리스트
     static Map<String, String> loginUserNow = new HashMap<>(); // 현재 접속자 리스트
-//    static Map<Integer, byte[]> idStorage = new HashMap<>(); // 대화라인별 유저저장소
-//    static Map<Integer, byte[]> conversationStorage = new HashMap<>(); // 대화라인 저장소
-
-
     static Map<Integer, String> typeStorage = new HashMap<>(); // 대화라인별 타입저장소
     static Map<Integer, String> idStorage = new HashMap<>(); // 대화라인별 유저저장소
     static Map<Integer, String> conversationStorage = new HashMap<>(); // 대화라인 저장소
@@ -35,7 +30,7 @@ public class ServerReceiver extends Thread {
     static final String SYSTEM_CODE1 = "SYSL";
     static final String EMOJI_CODE = "EMOJ";
     static final String LOGOUT_CODE = "LOUT";
-    static final int PACKET_SIZE = 10;
+    static final int PACKET_SIZE = 100;
     static Integer conversationIndex = 0;
     boolean isNextstep = false;
     int loginLogSize = 5;
@@ -160,7 +155,6 @@ public class ServerReceiver extends Thread {
 
                     for (int i = 1; i < 10; i++) {
                         if (keyword.equals(String.valueOf(i))) {
-//                            sendToAll(EMOJI_CODE, String.valueOf(i));
                             sendToAll(EMOJI_CODE, keyword1);
                         }
                     }
@@ -240,29 +234,23 @@ public class ServerReceiver extends Thread {
         boolean loginAccess = false;
 
         if (loginUserNow.containsKey(name)) {
-            try {
-                String type = "DENI";
-                String msg = "중복된 ID가 존재합니다.";
-                bufferedOutputStream.write(messageSize(msg));
-                bufferedOutputStream.write(tlvMessage(type, msg));
-                bufferedOutputStream.flush();
-                loginAccess = false;
-            } catch (IOException e) {
 
-            }
+            String msgType = "DENI";
+            String msg = "중복된 ID가 존재합니다.";
+
+//            sendPacketTwice(msgType, msg);
+            sendPacketOnce(msgType, msg);
+
+            loginAccess = false;
+
         } else {
+            String msgType = "ACSS";
+            String msg = "로그인합니다.";
 
-            try {
-                String type = "ACSS";
-                String msg = "로그인합니다.";
-                bufferedOutputStream.write(messageSize(msg));
-                bufferedOutputStream.write(tlvMessage(type, msg));
-                bufferedOutputStream.flush();
-                loginAccess = true;
-            } catch (IOException e) {
+//            sendPacketTwice(msgType, msg);
+            sendPacketOnce(msgType, msg);
 
-            }
-
+            loginAccess = true;
         }
 
         return loginAccess;
@@ -283,19 +271,19 @@ public class ServerReceiver extends Thread {
                         int indexEnd = loginLogoutLog[i][1];
 
                         for (int j = indexStart; j < indexEnd; j++) {
-                            String type = typeStorage.get(j);
+                            String msgType = typeStorage.get(j);
                             String id = idStorage.get(j);
                             String txtMsg = conversationStorage.get(j);
                             String totalMsg = txtMsg + "/" + id;
                             BufferedOutputStream bufferedOutputStream = (BufferedOutputStream) clients.get(element);
-                            bufferedOutputStream.write(messageSize(totalMsg));
-                            bufferedOutputStream.write(tlvMessage(type, totalMsg));
-                            bufferedOutputStream.flush();
+
+//                            sendPacketTwice(bufferedOutputStream, msgType, totalMsg);
+                            sendPacketOnce(bufferedOutputStream, msgType, totalMsg);
+
                             Thread.sleep(50);
                         }
 
                     }
-
 
                     if (loginLogoutLog[i][1] == 0) {
                         if (i == 0) {
@@ -303,25 +291,22 @@ public class ServerReceiver extends Thread {
                             int indexEnd = conversationIndex;
 
                             for (int j = indexStart; j < indexEnd; j++) {
-                                String type = typeStorage.get(j);
+                                String msgType = typeStorage.get(j);
                                 String id = idStorage.get(j);
                                 String txtMsg = conversationStorage.get(j);
                                 String totalMsg = txtMsg + "/" + id;
                                 BufferedOutputStream bufferedOutputStream = (BufferedOutputStream) clients.get(element);
-                                bufferedOutputStream.write(messageSize(totalMsg));
-                                bufferedOutputStream.write(tlvMessage(type, totalMsg));
-                                bufferedOutputStream.flush();
+
+//                                sendPacketTwice(bufferedOutputStream, msgType, totalMsg);
+                                sendPacketOnce(bufferedOutputStream, msgType, totalMsg);
+
                                 Thread.sleep(50);
                             }
-
                         } else {
                             i = logSize;
                         }
-
                     }
                 }
-
-            } catch (IOException e) {
 
             } catch (InterruptedException ie) {
 
@@ -349,28 +334,31 @@ public class ServerReceiver extends Thread {
     }
 
     private byte[] receiveStreamDataToArrayWithSize1() {
-        byte[] bufferSize = new byte[16 + PACKET_SIZE]; // 책갈피
+        byte[] bufferTemp = new byte[16 + PACKET_SIZE]; // 책갈피
         try {
-            bufferedInputStream.read(bufferSize);
+            bufferedInputStream.read(bufferTemp);
             byte[] reqCount = new byte[4];
-            System.arraycopy(bufferSize, 12, reqCount, 0, 4);
+            System.arraycopy(bufferTemp, 12, reqCount, 0, 4);
             int arrayCount = byteArrayToInt(reqCount);
             System.out.println("서버쪽 메세지 패킷 totalCount : " + arrayCount);
             byte[] buffer = new byte[16 + arrayCount * PACKET_SIZE];
-            System.arraycopy(bufferSize, 0, buffer, 0, 16);
-            System.arraycopy(bufferSize, 8, reqCount, 0, 4);
+            System.arraycopy(bufferTemp, 0, buffer, 0, 16);
+            System.arraycopy(bufferTemp, 8, reqCount, 0, 4);
             int currentCount = byteArrayToInt(reqCount);
             System.out.println("서버쪽 메세지 현재 카운트 : " + currentCount + " / " + arrayCount);
-            System.arraycopy(bufferSize, 16, buffer, 16, PACKET_SIZE);
+            System.out.println("서버쪽 반복문 현재 카운트 : " + (1) + " / " + arrayCount);
+            System.arraycopy(bufferTemp, 16, buffer, 16, PACKET_SIZE);
             if (arrayCount > 1) {
                 // currentCount와 메세지만 변경
-                for (int i = 0; i < arrayCount; i++) {
-                    byte[] bufferSize_tail = new byte[16 + PACKET_SIZE]; //
-                    bufferedInputStream.read(bufferSize_tail);
-                    System.arraycopy(bufferSize_tail, 8, reqCount, 0, 4);
+                for (int i = 0; i < arrayCount - 1; i++) {
+                    byte[] bufferTemp_tail = new byte[16 + PACKET_SIZE]; //
+                    bufferedInputStream.read(bufferTemp_tail);
+                    int position = 16 + (i + 1) * PACKET_SIZE;
+                    System.arraycopy(bufferTemp_tail, 16, buffer, position, PACKET_SIZE);
+                    System.arraycopy(bufferTemp_tail, 8, reqCount, 0, 4);
                     currentCount = byteArrayToInt(reqCount);
                     System.out.println("서버쪽 메세지 현재 카운트 : " + currentCount + " / " + arrayCount);
-                    System.out.println("서버쪽 반복문 현재 카운트 : " + (i + 1) + " / " + arrayCount);
+                    System.out.println("서버쪽 반복문 현재 카운트 : " + (i + 2) + " / " + arrayCount);
                 }
             }
 
@@ -382,12 +370,12 @@ public class ServerReceiver extends Thread {
     }
 
     private byte[] receiveStreamDataToArrayWithSize() {
-//        byte[] bufferSize = new byte[8]; // 책갈피
-        byte[] bufferSize = new byte[4]; // 책갈피
+//        byte[] bufferTemp = new byte[8]; // 책갈피
+        byte[] bufferTemp = new byte[4]; // 책갈피
         try {
-            bufferedInputStream.read(bufferSize);
+            bufferedInputStream.read(bufferTemp);
             byte[] reqCount = new byte[4];
-            System.arraycopy(bufferSize, 0, reqCount, 0, 4);
+            System.arraycopy(bufferTemp, 0, reqCount, 0, 4);
             int arrayCount = byteArrayToInt(reqCount);
             System.out.println("Serverside Message Count:" + arrayCount);
             byte[] buffer = new byte[arrayCount * PACKET_SIZE];
@@ -427,17 +415,15 @@ public class ServerReceiver extends Thread {
 
         for (int i = indexStart; i < indexEnd; i++) {
             try {
-                String type = typeStorage.get(i);
+                String msgType = typeStorage.get(i);
                 String id = idStorage.get(i);
                 String txtMsg = conversationStorage.get(i);
                 String totalMsg = txtMsg + "/" + id;
 
-                bufferedOutputStream.write(messageSize(totalMsg));
-                bufferedOutputStream.write(tlvMessage(type, totalMsg));
-                bufferedOutputStream.flush();
-                Thread.sleep(50);
-            } catch (IOException e) {
+//                sendPacketTwice(msgType, totalMsg);
+                sendPacketOnce(msgType, totalMsg);
 
+                Thread.sleep(50);
             } catch (InterruptedException e) {
 
             }
@@ -445,22 +431,27 @@ public class ServerReceiver extends Thread {
 
     }
 
-    private void sendToAll(String type, String msg) {
+    private void sendToAll(String msgType, String msg) {
         Iterator it = clients.keySet().iterator();
         String id = "";
         String txtMsg = "";
         String totalMsg = "";
-        if (type.equals(MESSAGE_CODE) || type.equals(SYSTEM_CODE) || type.equals(SYSTEM_CODE1) || type.equals(EMOJI_CODE)) {
+        if (msgType.equals(MESSAGE_CODE) || msgType.equals(SYSTEM_CODE) || msgType.equals(SYSTEM_CODE1) || msgType.equals(EMOJI_CODE)) {
             int strLine = msg.lastIndexOf("/");
-            txtMsg = msg.substring(0, strLine);
-            id = msg.substring(strLine + 1);
+            if (strLine < 0) {
+                txtMsg = msg;
+            } else {
+
+                txtMsg = msg.substring(0, strLine);
+                id = msg.substring(strLine + 1);
+            }
 
         } else {
             txtMsg = msg;
         }
 //        idStorage.put(conversationIndex, tlvMessage(type, id));
 //        conversationStorage.put(conversationIndex, tlvMessage(type, txtMsg));
-        typeStorage.put(conversationIndex, type);
+        typeStorage.put(conversationIndex, msgType);
         idStorage.put(conversationIndex, id);
         conversationStorage.put(conversationIndex, txtMsg);
 
@@ -470,42 +461,95 @@ public class ServerReceiver extends Thread {
         conversationIndex += 1;
         //System.out.println("Storage 출력:" + conversationStorage.toString().replace(", ", ""));
         while (it.hasNext()) {
-            try {
-                String element = (String) it.next();
-                BufferedOutputStream bufferedOutputStream = (BufferedOutputStream) clients.get(element);
-//                System.out.println("element:" + element);
-//                bufferedOutputStream.write(messageSize(totalMsg));
-//                bufferedOutputStream.write(tlvMessage(type, totalMsg));
-//                bufferedOutputStream.flush();
 
-                byte[] req = tlvMessageWithSize(type, totalMsg);
-                byte[] countMsg = new byte[4];
-                System.arraycopy(req, 8, countMsg, 0, 4);
-                int arrayCount = byteArrayToInt(countMsg);
-                int restSize = (req.length - 12) % PACKET_SIZE;
-                System.out.println("sendToAll 메세지 패킷 totalCount : " + arrayCount);
-                for (int i = 0; i < arrayCount; i++) {
-                    byte[] resultReq = new byte[16 + PACKET_SIZE]; // type, length, currentCount, totalCount, Msg(PACKET_SIZE)
-                    byte[] currentCount = toBytes(i + 1);
-                    System.arraycopy(req, 0, resultReq, 0, 8);          // type, length
-                    System.arraycopy(currentCount, 0, resultReq, 8, 4); // 현재 메세지
-                    System.arraycopy(countMsg, 0, resultReq, 12, 4); // 현재 메세지
-                    int position = 12 + i * PACKET_SIZE;
+            String element = (String) it.next();
+            BufferedOutputStream bufferedOutputStream = (BufferedOutputStream) clients.get(element);
+            System.out.println("element:" + element);
 
-//                    System.arraycopy(req, position, resultReq, 16, req.length - (position)); // 메세지
-                    if (i == arrayCount - 1) {
-                        System.arraycopy(req, position, resultReq, 16, restSize); // 메세지
-                    } else {
-                        System.arraycopy(req, position, resultReq, 16, PACKET_SIZE); // 메세지
-                    }
-                    System.out.println("sendToAll 메세지 패킷 currentCount : " + (i + 1) + " / " + arrayCount);
-                    bufferedOutputStream.write(resultReq);
-                    bufferedOutputStream.flush();
+//            sendPacketTwice(bufferedOutputStream, msgType, totalMsg);
+            sendPacketOnce(bufferedOutputStream, msgType, totalMsg);
+
+
+        }
+    }
+
+    private void sendPacketTwice(BufferedOutputStream bufferedOutputStream, String msgType, String totalMsg) {
+        try {
+            bufferedOutputStream.write(messageSize(totalMsg));
+            bufferedOutputStream.write(tlvMessage(msgType, totalMsg));
+            bufferedOutputStream.flush();
+        } catch (IOException e) {
+
+        }
+    }
+
+    private void sendPacketTwice(String msgType, String totalMsg) {
+        try {
+            bufferedOutputStream.write(messageSize(totalMsg));
+            bufferedOutputStream.write(tlvMessage(msgType, totalMsg));
+            bufferedOutputStream.flush();
+        } catch (IOException e) {
+
+        }
+    }
+
+    private void sendPacketOnce(BufferedOutputStream bufferedOutputStream, String msgType, String totalMsg) {
+        try {
+            byte[] req = tlvMessageWithSize(msgType, totalMsg);
+            byte[] countMsg = new byte[4];
+            System.arraycopy(req, 8, countMsg, 0, 4);
+            int arrayCount = byteArrayToInt(countMsg); // totalCnt
+            int restSize = (req.length - 12) % PACKET_SIZE;
+            System.out.println("sendToAll 메세지 패킷 totalCount : " + arrayCount);
+            for (int i = 0; i < arrayCount; i++) {
+                byte[] resultReq = new byte[16 + PACKET_SIZE]; // type, length, currentCount, totalCount, Msg(PACKET_SIZE)
+                byte[] currentCount = toBytes(i + 1);
+                System.arraycopy(req, 0, resultReq, 0, 8);          // type, length
+                System.arraycopy(currentCount, 0, resultReq, 8, 4); // 현재 메세지
+                System.arraycopy(countMsg, 0, resultReq, 12, 4); // 현재 메세지
+                int position = 12 + i * PACKET_SIZE;
+
+                if (i == arrayCount - 1) {
+                    System.arraycopy(req, position, resultReq, 16, restSize); // 메세지
+                } else {
+                    System.arraycopy(req, position, resultReq, 16, PACKET_SIZE); // 메세지
                 }
-
-            } catch (IOException e) {
-
+                System.out.println("sendToAll 메세지 패킷 currentCount : " + (i + 1) + " / " + arrayCount);
+                bufferedOutputStream.write(resultReq);
+                bufferedOutputStream.flush();
             }
+        } catch (IOException e) {
+
+        }
+    }
+
+    private void sendPacketOnce(String msgType, String totalMsg) {
+        try {
+            byte[] req = tlvMessageWithSize(msgType, totalMsg);
+            byte[] countMsg = new byte[4];
+            System.arraycopy(req, 8, countMsg, 0, 4);
+            int arrayCount = byteArrayToInt(countMsg);
+            int restSize = (req.length - 12) % PACKET_SIZE;
+            System.out.println("sendToAll 메세지 패킷 totalCount : " + arrayCount);
+            for (int i = 0; i < arrayCount; i++) {
+                byte[] resultReq = new byte[16 + PACKET_SIZE]; // type, length, currentCount, totalCount, Msg(PACKET_SIZE)
+                byte[] currentCount = toBytes(i + 1);
+                System.arraycopy(req, 0, resultReq, 0, 8);          // type, length
+                System.arraycopy(currentCount, 0, resultReq, 8, 4); // 현재 메세지
+                System.arraycopy(countMsg, 0, resultReq, 12, 4); // 현재 메세지
+                int position = 12 + i * PACKET_SIZE;
+
+                if (i == arrayCount - 1) {
+                    System.arraycopy(req, position, resultReq, 16, restSize); // 메세지
+                } else {
+                    System.arraycopy(req, position, resultReq, 16, PACKET_SIZE); // 메세지
+                }
+                System.out.println("sendToAll 메세지 패킷 currentCount : " + (i + 1) + " / " + arrayCount);
+                bufferedOutputStream.write(resultReq);
+                bufferedOutputStream.flush();
+            }
+        } catch (IOException e) {
+
         }
     }
 
@@ -544,7 +588,8 @@ public class ServerReceiver extends Thread {
             byte[] reqLength = toBytes(reqValue.length);
 
 //            byte[] reqCount = toBytes((reqValue.length / 10) + 1);
-            byte[] reqCount = toBytes(((8 + reqValue.length) / 10) + 1); // TYPE, LENGTH 길이 포함
+            int messageCount = (int) Math.ceil((double) (8 + reqValue.length) / PACKET_SIZE); // 패킷 수
+            byte[] reqCount = toBytes(messageCount); // TYPE, LENGTH 길이 포함
 
             byte[] req = new byte[8];
             System.arraycopy(reqCount, 0, req, 0, 4);

@@ -8,7 +8,7 @@ import java.net.Socket;
 public class ClientSender extends Thread {
     Socket socket;
     BufferedOutputStream bufferedOutputStream;
-    static final int PACKET_SIZE = 10;
+    static final int PACKET_SIZE = 100;
 
     ClientSender(Socket socket) {
         this.socket = socket;
@@ -20,16 +20,20 @@ public class ClientSender extends Thread {
     }
 
 
-    public void sendMsg(String type, String textLine) {
-        try {
-//            bufferedOutputStream.write(messageSize(textLine));
-//            bufferedOutputStream.write(tlvMessage(type, textLine));
-//            bufferedOutputStream.flush();
+    public void sendMsg(String msgType, String textLine) {
+//        sendPacketTwice(msgType, textLine);
+        sendPacketOnce(msgType, textLine);
 
-            byte[] req = tlvMessageWithSize(type, textLine);
+    }
+
+    private void sendPacketOnce(String msgType, String textLine) {
+        try {
+
+            byte[] req = tlvMessageWithSize(msgType, textLine);
             byte[] countMsg = new byte[4];
             System.arraycopy(req, 8, countMsg, 0, 4);
             int arrayCount = byteArrayToInt(countMsg);
+            int restSize = (req.length - 12) % PACKET_SIZE;
             System.out.println("클라이언트쪽 메세지 패킷 totalCount : " + arrayCount);
             for (int i = 0; i < arrayCount; i++) {
                 byte[] resultReq = new byte[16 + PACKET_SIZE]; // type, length, currentCount, totalCount, Msg(PACKET_SIZE)
@@ -38,26 +42,31 @@ public class ClientSender extends Thread {
                 System.arraycopy(currentCount, 0, resultReq, 8, 4); // 현재 메세지
                 System.arraycopy(countMsg, 0, resultReq, 12, 4); // 현재 메세지
                 int position = 12 + i * PACKET_SIZE;
-                System.arraycopy(req, position, resultReq, 16, req.length - (position)); // 메세지
+
+                if (i == arrayCount - 1) {
+                    System.arraycopy(req, position, resultReq, 16, restSize); // 메세지
+                } else {
+                    System.arraycopy(req, position, resultReq, 16, PACKET_SIZE); // 메세지
+                }
+
                 System.out.println("클라이언트쪽 메세지 패킷 currentCount : " + (i + 1) + " / " + arrayCount);
                 bufferedOutputStream.write(resultReq);
                 bufferedOutputStream.flush();
             }
-
-
         } catch (IOException e) {
-            e.printStackTrace();
+
         }
-
-
     }
 
-    private void sendPacketOnce() {
+    private void sendPacketTwice(String msgType, String textLine) {
+        try {
 
-    }
+            bufferedOutputStream.write(messageSize(textLine));
+            bufferedOutputStream.write(tlvMessage(msgType, textLine));
+            bufferedOutputStream.flush();
+        } catch (IOException e) {
 
-    private void sendPacketTwice() {
-
+        }
     }
 
     private byte[] tlvMessageWithSize(String msgType, String reqMsg) {
