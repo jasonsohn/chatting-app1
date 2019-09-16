@@ -115,15 +115,12 @@ public class FrameChat extends JFrame implements ActionListener {
             return;
         }
 
-//        textLine = textField.getText() + "/"+id;
-//        clientSender.sendMsg(MESSAGE_CODE, textLine);
         textLine = textField.getText();
         clientSender.sendMsg(MESSAGE_CODE, textLine, id);
         textField.setText("");
     }
 
     public void logout() {
-//        clientSender.sendMsg(LOGOUT_CODE, "LOG_OUT");
         clientSender.sendMsg(LOGOUT_CODE, "LOG_OUT", FrameId.getId());
 
     }

@@ -61,12 +61,10 @@ public class FrameId  extends JFrame implements ActionListener {
     }
 
     public void login() {
-//        clientSender.sendMsg("LOGN", getId());
         clientSender.sendMsg("LOGN", getId(), getId());
     }
 
     public void logout() {
-//        clientSender.sendMsg(LOGOUT_CODE, getId());
         clientSender.sendMsg(LOGOUT_CODE, getId(), getId());
     }
 

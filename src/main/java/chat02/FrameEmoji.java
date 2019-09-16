@@ -87,47 +87,38 @@ public class FrameEmoji extends JFrame implements ActionListener {
         }
 
         if (e.getSource() == btnEmoji_1) {
-//            clientSender.sendMsg(EMOJI_CODE, emoji_1 + "/" + id);
             clientSender.sendMsg(EMOJI_CODE, emoji_1,id);
         }
 
         if (e.getSource() == btnEmoji_2) {
-//            clientSender.sendMsg(EMOJI_CODE, emoji_2 + "/" + id);
             clientSender.sendMsg(EMOJI_CODE, emoji_2, id);
         }
 
         if (e.getSource() == btnEmoji_3) {
-//            clientSender.sendMsg(EMOJI_CODE, emoji_3 + "/" + id);
             clientSender.sendMsg(EMOJI_CODE, emoji_3, id);
         }
 
         if (e.getSource() == btnEmoji_4) {
-//            clientSender.sendMsg(EMOJI_CODE, emoji_4 + "/" + id);
             clientSender.sendMsg(EMOJI_CODE, emoji_4, id);
         }
 
         if (e.getSource() == btnEmoji_5) {
-//            clientSender.sendMsg(EMOJI_CODE, emoji_5 + "/" + id);
             clientSender.sendMsg(EMOJI_CODE, emoji_5, id);
         }
 
         if (e.getSource() == btnEmoji_6) {
-//            clientSender.sendMsg(EMOJI_CODE, emoji_6 + "/" + id);
             clientSender.sendMsg(EMOJI_CODE, emoji_6, id);
         }
 
         if (e.getSource() == btnEmoji_7) {
-//            clientSender.sendMsg(EMOJI_CODE, emoji_7 + "/" + id);
             clientSender.sendMsg(EMOJI_CODE, emoji_7, id);
         }
 
         if (e.getSource() == btnEmoji_8) {
-//            clientSender.sendMsg(EMOJI_CODE, emoji_8 + "/" + id);
             clientSender.sendMsg(EMOJI_CODE, emoji_8, id);
         }
 
         if (e.getSource() == btnEmoji_9) {
-//            clientSender.sendMsg(EMOJI_CODE, emoji_9 + "/" + id);
             clientSender.sendMsg(EMOJI_CODE, emoji_9, id);
         }
     }

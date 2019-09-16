@@ -46,9 +46,7 @@ public class ClientReceiver extends Thread {
         while (bufferedInputStream != null) {
             try {
 
-//                buffer = receiveStreamDataToArrayWithSize1();
                 buffer = receiveStreamDataToArrayWithSize2();
-//                tlvList = splitTypeLengthValue(buffer);
                 tlvList = splitTypeLengthValue1(buffer); // type, length, idValue, value
 
                 type = new String(tlvList.get(0), 0, tlvList.get(0).length, "UTF-8");
@@ -124,10 +122,6 @@ public class ClientReceiver extends Thread {
                 String userId = new String(tlvList.get(2), 0, tlvList.get(2).length, "UTF-8");
                 String txtMsg = new String(tlvList.get(3), 0, tlvList.get(3).length, "UTF-8");
 
-//                int strLine = value.lastIndexOf("/");
-//                String txtMsg = value.substring(0, strLine);
-//                String id = value.substring(strLine + 1);
-//
                 userId = "[" + userId + "] : ";
 
                 if (txtMsg.equals("1")) {
@@ -157,53 +151,13 @@ public class ClientReceiver extends Thread {
         }
     }
 
-    private byte[] receiveStreamDataToArrayWithSize1() {
-        byte[] bufferTemp = new byte[16 + Const.PACKET_SIZE]; // 책갈피
-        try {
-            bufferedInputStream.read(bufferTemp);
-            byte[] reqCount = new byte[4];
-            System.arraycopy(bufferTemp, 12, reqCount, 0, 4);
-            int messagePacketCount = byteArrayToInt(reqCount); // totalCnt
-            System.out.println("ClientReceiver 메세지 패킷 totalCount : " + messagePacketCount);
-            byte[] buffer = new byte[16 + messagePacketCount * Const.PACKET_SIZE];
-            System.arraycopy(bufferTemp, 0, buffer, 0, 16);
-            System.arraycopy(bufferTemp, 8, reqCount, 0, 4);
-            int currentCount = byteArrayToInt(reqCount);
-            System.out.println("ClientReceiver 메세지 현재 카운트 : " + currentCount + " / " + messagePacketCount);
-            System.out.println("ClientReceiver 반복문 현재 카운트 : " + (1) + " / " + messagePacketCount);
-            System.arraycopy(bufferTemp, 16, buffer, 16, Const.PACKET_SIZE);
-            if (messagePacketCount > 1) {
-                // currentCount와 메세지만 변경
-                for (int i = 0; i < messagePacketCount - 1; i++) {
-                    byte[] bufferTemp_tail = new byte[16 + Const.PACKET_SIZE]; //
-                    bufferedInputStream.read(bufferTemp_tail);
-                    int position = 16 + (i + 1) * Const.PACKET_SIZE;
-                    System.arraycopy(bufferTemp_tail, 16, buffer, position, Const.PACKET_SIZE);
-                    System.arraycopy(bufferTemp_tail, 8, reqCount, 0, 4);
-                    currentCount = byteArrayToInt(reqCount);
-                    System.out.println("ClientReceiver 메세지 현재 카운트 : " + currentCount + " / " + messagePacketCount);
-                    System.out.println("ClientReceiver 반복문 현재 카운트 : " + (i + 2) + " / " + messagePacketCount);
-                }
-            }
-
-            return buffer;
-        } catch (IOException e) {
-            return null;
-        }
-
-    }
-
     private byte[] receiveStreamDataToArrayWithSize2() {
         // type(4), length(4), currentCnt(4), totalCnt(4), idLength(4), idValue(10), Msg(PACKET_SIZE)
         byte[] bufferTemp = new byte[30 + Const.PACKET_SIZE]; // 아이디 최대 10자
         try {
             bufferedInputStream.read(bufferTemp);
             byte[] reqCount = new byte[4];
-//            byte[] idLength = new byte[4];
-
             System.arraycopy(bufferTemp, 12, reqCount, 0, 4); // totalCnt 복사
-//            System.arraycopy(bufferTemp, 16, idLength, 0, 4); // id길이 복사
-//            int idValueLength = byteArrayToInt(idLength); // id길이 변환
             int messagePacketCount = byteArrayToInt(reqCount);
             System.out.println("서버쪽 메세지 패킷 totalCount : " + messagePacketCount);
             byte[] buffer = new byte[30 + messagePacketCount * Const.PACKET_SIZE]; // 총 배열 초기화
@@ -217,7 +171,7 @@ public class ClientReceiver extends Thread {
             if (messagePacketCount > 1) { // 패킷이 1개 이상일경우
                 // currentCount와 메세지만 변경
                 for (int i = 0; i < messagePacketCount - 1; i++) {
-                    byte[] bufferTemp_tail = new byte[30 + Const.PACKET_SIZE]; //
+                    byte[] bufferTemp_tail = new byte[30 + Const.PACKET_SIZE];
                     bufferedInputStream.read(bufferTemp_tail);
                     int position = 30 + (i + 1) * Const.PACKET_SIZE;
                     System.arraycopy(bufferTemp_tail, 30, buffer, position, Const.PACKET_SIZE);
@@ -235,25 +189,6 @@ public class ClientReceiver extends Thread {
 
     }
 
-    private ArrayList<byte[]> splitTypeLengthValue(byte[] buffer) {
-        ArrayList<byte[]> tlvList = new ArrayList<>();
-        byte[] resArray = buffer;
-        byte[] type = new byte[4];
-        byte[] length = new byte[4];
-        System.arraycopy(resArray, 4, length, 0, 4);
-        int arraySize = byteArrayToInt(length);
-        byte[] value = new byte[arraySize];
-        // 전송원배열, 전송원시작위치, 전송처배열, 전송처 시작위치, 카피되는 배열요소의 길이
-        System.arraycopy(resArray, 0, type, 0, 4);
-        System.arraycopy(resArray, 4, length, 0, 4);
-        System.arraycopy(resArray, 16, value, 0, value.length);
-        tlvList.add(type);
-        tlvList.add(length);
-        tlvList.add(value);
-
-        return tlvList;
-    }
-
     private ArrayList<byte[]> splitTypeLengthValue1(byte[] buffer) {
         // type(4), length(4), currentCnt(4), totalCnt(4), idLength(4), idValue(), PACKET_SIZE
         ArrayList<byte[]> tlvList = new ArrayList<>();
@@ -268,7 +203,7 @@ public class ClientReceiver extends Thread {
         System.arraycopy(resArray, 16, idLength, 0, 4);
         int idValueLength = byteArrayToInt(idLength);
         byte[] idValue = new byte[idValueLength];
-
+        // 전송원배열, 전송원시작위치, 전송처배열, 전송처 시작위치, 카피되는 배열요소의 길이
         System.arraycopy(resArray, 0, type, 0, 4);
         System.arraycopy(resArray, 4, length, 0, 4);
         System.arraycopy(resArray, 20, idValue, 0, idValue.length);
