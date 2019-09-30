@@ -81,6 +81,10 @@ public class ClientReceiver extends Thread {
                         frameChat.jScrollPane2.getVerticalScrollBar().setValue(frameChat.jScrollPane2.getVerticalScrollBar().getMaximum());
                     }
 
+                    if (type.equals("CLER")) {
+                        System.out.println("get clear");
+                        frameChat.model1.setNumRows(0);
+                    }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -124,23 +128,23 @@ public class ClientReceiver extends Thread {
 
                 userId = "[" + userId + "] : ";
 
-                if (txtMsg.equals("1")) {
+                if (txtMsg.equals("/emoji_1")) {
                     icon = new ImageIcon(ImageIO.read(new File("C:\\dev\\images\\emoji_" + (1) + ".png")));
-                } else if (txtMsg.equals("2")) {
+                } else if (txtMsg.equals("/emoji_2")) {
                     icon = new ImageIcon(ImageIO.read(new File("C:\\dev\\images\\emoji_" + (2) + ".png")));
-                } else if (txtMsg.equals("3")) {
+                } else if (txtMsg.equals("/emoji_3")) {
                     icon = new ImageIcon(ImageIO.read(new File("C:\\dev\\images\\emoji_" + (3) + ".png")));
-                } else if (txtMsg.equals("4")) {
+                } else if (txtMsg.equals("/emoji_4")) {
                     icon = new ImageIcon(ImageIO.read(new File("C:\\dev\\images\\emoji_" + (4) + ".png")));
-                } else if (txtMsg.equals("5")) {
+                } else if (txtMsg.equals("/emoji_5")) {
                     icon = new ImageIcon(ImageIO.read(new File("C:\\dev\\images\\emoji_" + (5) + ".png")));
-                } else if (txtMsg.equals("6")) {
+                } else if (txtMsg.equals("/emoji_6")) {
                     icon = new ImageIcon(ImageIO.read(new File("C:\\dev\\images\\emoji_" + (6) + ".png")));
-                } else if (txtMsg.equals("7")) {
+                } else if (txtMsg.equals("/emoji_7")) {
                     icon = new ImageIcon(ImageIO.read(new File("C:\\dev\\images\\emoji_" + (7) + ".png")));
-                } else if (txtMsg.equals("8")) {
+                } else if (txtMsg.equals("/emoji_8")) {
                     icon = new ImageIcon(ImageIO.read(new File("C:\\dev\\images\\emoji_" + (8) + ".png")));
-                } else if (txtMsg.equals("9")) {
+                } else if (txtMsg.equals("/emoji_9")) {
                     icon = new ImageIcon(ImageIO.read(new File("C:\\dev\\images\\emoji_" + (9) + ".png")));
                 }
                 Object[] rowData = {userId, icon};
@@ -153,28 +157,28 @@ public class ClientReceiver extends Thread {
 
     private byte[] receiveStreamDataToArrayWithSize2() {
         // type(4), length(4), currentCnt(4), totalCnt(4), idLength(4), idValue(10), Msg(PACKET_SIZE)
-        byte[] bufferTemp = new byte[30 + Const.PACKET_SIZE]; // 아이디 최대 10자
+        byte[] bufferTemp = new byte[20 + Const.ID_SIZE + Const.PACKET_SIZE]; // 아이디 최대 10자
         try {
             bufferedInputStream.read(bufferTemp);
             byte[] reqCount = new byte[4];
             System.arraycopy(bufferTemp, 12, reqCount, 0, 4); // totalCnt 복사
             int messagePacketCount = byteArrayToInt(reqCount);
             System.out.println("서버쪽 메세지 패킷 totalCount : " + messagePacketCount);
-            byte[] buffer = new byte[30 + messagePacketCount * Const.PACKET_SIZE]; // 총 배열 초기화
-            System.arraycopy(bufferTemp, 0, buffer, 0, 30); // idValue까지
+            byte[] buffer = new byte[20 + Const.ID_SIZE + messagePacketCount * Const.PACKET_SIZE]; // 총 배열 초기화
+            System.arraycopy(bufferTemp, 0, buffer, 0, 20 + Const.ID_SIZE); // idValue까지
             System.arraycopy(bufferTemp, 8, reqCount, 0, 4);
             int currentCount = byteArrayToInt(reqCount);
             System.out.println("서버쪽 메세지 현재 카운트 : " + currentCount + " / " + messagePacketCount);
             System.out.println("서버쪽 반복문 현재 카운트 : " + (1) + " / " + messagePacketCount);
-            System.arraycopy(bufferTemp, 30, buffer, 30, Const.PACKET_SIZE);
+            System.arraycopy(bufferTemp, 20 + Const.ID_SIZE, buffer, 20 + Const.ID_SIZE, Const.PACKET_SIZE);
 
             if (messagePacketCount > 1) { // 패킷이 1개 이상일경우
                 // currentCount와 메세지만 변경
                 for (int i = 0; i < messagePacketCount - 1; i++) {
-                    byte[] bufferTemp_tail = new byte[30 + Const.PACKET_SIZE];
+                    byte[] bufferTemp_tail = new byte[20 + Const.ID_SIZE + Const.PACKET_SIZE];
                     bufferedInputStream.read(bufferTemp_tail);
-                    int position = 30 + (i + 1) * Const.PACKET_SIZE;
-                    System.arraycopy(bufferTemp_tail, 30, buffer, position, Const.PACKET_SIZE);
+                    int position = 20 + Const.ID_SIZE + (i + 1) * Const.PACKET_SIZE;
+                    System.arraycopy(bufferTemp_tail, 20 + Const.ID_SIZE, buffer, position, Const.PACKET_SIZE);
                     System.arraycopy(bufferTemp_tail, 8, reqCount, 0, 4);
                     currentCount = byteArrayToInt(reqCount);
                     System.out.println("서버쪽 메세지 현재 카운트 : " + currentCount + " / " + messagePacketCount);
@@ -207,7 +211,7 @@ public class ClientReceiver extends Thread {
         System.arraycopy(resArray, 0, type, 0, 4);
         System.arraycopy(resArray, 4, length, 0, 4);
         System.arraycopy(resArray, 20, idValue, 0, idValue.length);
-        System.arraycopy(resArray, 30, value, 0, value.length);
+        System.arraycopy(resArray, 20 + Const.ID_SIZE, value, 0, value.length);
         tlvList.add(type);
         tlvList.add(length);
         tlvList.add(idValue);

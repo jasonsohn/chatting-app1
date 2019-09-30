@@ -32,22 +32,22 @@ public class ClientSender extends Thread {
             byte[] totalCount = new byte[4];
             System.arraycopy(req, 8, totalCount, 0, 4);
             int messagePacketCount = byteArrayToInt(totalCount);
-            int restReqValueLength = (req.length - 26) % Const.PACKET_SIZE;
+            int restReqValueLength = (req.length - 16 - Const.ID_SIZE) % Const.PACKET_SIZE;
             System.out.println("클라이언트쪽 메세지 패킷 totalCount : " + messagePacketCount);
             for (int i = 0; i < messagePacketCount; i++) {
                 // type(4), length(4), currentCount(4), totalCount(4), idLength(4), idValue(10), Msg(PACKET_SIZE)
-                byte[] resultReq = new byte[30 + Const.PACKET_SIZE];
+                byte[] resultReq = new byte[20 + Const.ID_SIZE + Const.PACKET_SIZE];
                 byte[] currentCount = toBytes(i + 1);
                 System.arraycopy(req, 0, resultReq, 0, 8);          // type, length
                 System.arraycopy(currentCount, 0, resultReq, 8, 4); // 현재 패킷 횟수
                 System.arraycopy(req, 8, resultReq, 12, 18); // 총 패킷 횟수, ID 길이, 값
 
-                int position = 26 + i * Const.PACKET_SIZE;
+                int position = 16 + Const.ID_SIZE + i * Const.PACKET_SIZE;
 
                 if (i == messagePacketCount - 1) { // 마지막 패킷일경우
-                    System.arraycopy(req, position, resultReq, 30, restReqValueLength); // 메세지
+                    System.arraycopy(req, position, resultReq, 20 + Const.ID_SIZE, restReqValueLength); // 메세지
                 } else {
-                    System.arraycopy(req, position, resultReq, 30, Const.PACKET_SIZE); // 메세지
+                    System.arraycopy(req, position, resultReq, 20 + Const.ID_SIZE, Const.PACKET_SIZE); // 메세지
                 }
 
                 System.out.println("클라이언트쪽 메세지 패킷 currentCount : " + (i + 1) + " / " + messagePacketCount);
